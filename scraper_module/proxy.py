@@ -8,12 +8,14 @@ from typing import List, Optional
 import requests
 from fake_useragent import UserAgent
 from fp.fp import FreeProxy
-from loguru import logger
 from bs4 import BeautifulSoup
+from .logger import get_logger
 
 PROXY_CACHE_SIZE = 50
 PROXY_VALIDATION_TIMEOUT = 5
 PROXY_REFRESH_INTERVAL = 300  # seconds
+
+logger = get_logger("logs/proxy.log")
 
 
 @dataclass

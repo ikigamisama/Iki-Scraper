@@ -6,11 +6,12 @@ from typing import Optional, Dict, List, Union
 
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent
-from loguru import logger
+from .logger import get_logger
 from playwright.async_api import async_playwright, Page, Browser, BrowserContext, TimeoutError as PlaywrightTimeoutError
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 
 from .proxy import ProxyRotator
+logger = get_logger("logs/scraper.log")
 
 # Configuration
 MAX_RETRIES = 4

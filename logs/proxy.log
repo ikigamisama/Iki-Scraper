@@ -1,0 +1,9 @@
+2025-10-12 19:55:04 | INFO | __main__:main:52 - 🚀 Starting scraper examples...
+2025-10-12 19:55:04 | INFO | __main__:single_selector_example:18 - 🧭 Running single selector scrape (no proxy)...
+2025-10-12 19:55:14 | INFO | scraper_module.scraper:fetch_sections:152 - Navigating to https://httpbin.org/html
+2025-10-12 19:55:31 | INFO | scraper_module.scraper:fetch_sections:167 - Waiting for selector: h1
+2025-10-12 19:55:31 | SUCCESS | scraper_module.scraper:fetch_sections:174 - Extracted content for h1
+2025-10-12 19:55:31 | INFO | scraper_module.scraper:close:112 - Browser and context closed successfully.
+2025-10-12 19:55:31 | INFO | scraper_module.scraper:close:112 - Browser and context closed successfully.
+2025-10-12 19:55:31 | SUCCESS | __main__:single_selector_example:24 - Extracted content for selector 'h1' from https://httpbin.org/html
+2025-10-12 19:55:31 | INFO | __main__:main:58 - 🏁 Completed all scraping examples in 26.87 seconds.
