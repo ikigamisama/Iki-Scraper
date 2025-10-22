@@ -49,16 +49,15 @@ class AsyncPlaywrightScraper:
         self.browser_type = browser_type
         self.playwright = None
         self.browser: Optional[Browser] = None
-        self.context: Optional[BrowserContext] = None
         self.ua = UserAgent()
         self.pages_fetched = 0
 
-    async def _ensure_browser(self, proxy_server: Optional[str] = None):
-        """Launch browser and context if not already initialized."""
+    async def _ensure_browser(self):
+        """Launch browser if not already initialized (without proxy config)."""
         if self.playwright is None:
             self.playwright = await async_playwright().start()
 
-        # Launch browser
+        # Launch browser without proxy (proxy will be set per-context)
         launch_args = [
             "--no-first-run",
             "--no-default-browser-check",
@@ -69,25 +68,40 @@ class AsyncPlaywrightScraper:
             "--disable-gpu",
             "--no-sandbox",
         ]
-        proxy_config = {"server": proxy_server} if proxy_server else None
 
         if self.browser is None:
             if self.browser_type == "firefox":
-                self.browser = await self.playwright.firefox.launch(headless=True, args=launch_args, proxy=proxy_config)
+                self.browser = await self.playwright.firefox.launch(
+                    headless=False,
+                    args=launch_args
+                )
             else:
-                self.browser = await self.playwright.chromium.launch(headless=True, args=launch_args, proxy=proxy_config)
+                self.browser = await self.playwright.chromium.launch(
+                    headless=False,
+                    args=launch_args
+                )
+            logger.info(
+                f"Browser ({self.browser_type}) launched successfully.")
 
-        if self.context is None:
-            ua = self.ua.random
-            viewport = {"width": random.randint(
-                1200, 1920), "height": random.randint(720, 1080)}
-            self.context = await self.browser.new_context(
-                user_agent=ua,
-                viewport=viewport,
-                java_script_enabled=True,
-                ignore_https_errors=True,
-            )
-            await self.context.route("**/*", self._route_handler)
+    async def _create_context(self, proxy_server: Optional[str] = None) -> BrowserContext:
+        """Create a new browser context with optional proxy."""
+        ua = self.ua.random
+        viewport = {
+            "width": random.randint(1200, 1920),
+            "height": random.randint(720, 1080)
+        }
+
+        proxy_config = {"server": proxy_server} if proxy_server else None
+
+        context = await self.browser.new_context(
+            user_agent=ua,
+            viewport=viewport,
+            java_script_enabled=True,
+            ignore_https_errors=True,
+            proxy=proxy_config,
+        )
+        await context.route("**/*", self._route_handler)
+        return context
 
     async def _route_handler(self, route):
         """Block unnecessary resources to speed up scraping."""
@@ -100,16 +114,13 @@ class AsyncPlaywrightScraper:
     async def close(self):
         """Cleanly close all browser resources."""
         try:
-            if self.context:
-                await self.context.close()
-                self.context = None
             if self.browser:
                 await self.browser.close()
                 self.browser = None
             if self.playwright:
                 await self.playwright.stop()
                 self.playwright = None
-            logger.info("Browser and context closed successfully.")
+            logger.info("Browser closed successfully.")
         except Exception as e:
             logger.warning(f"Error closing resources: {e}")
 
@@ -142,21 +153,26 @@ class AsyncPlaywrightScraper:
                 logger.info(
                     "No proxy available, continuing direct connection.")
 
-        await self._ensure_browser(proxy_server=proxy)
+        # Ensure browser is running
+        await self._ensure_browser()
 
+        # Create new context with proxy for this request
+        context: Optional[BrowserContext] = None
         page: Optional[Page] = None
         results: Dict[str, Optional[BeautifulSoup]] = {}
-        try:
-            page = await self.context.new_page()
-            page.set_default_timeout(timeout)
-            logger.info(f"Navigating to {url}")
-            await page.goto(url, wait_until="domcontentloaded", timeout=timeout)
 
-            # Detect potential error pages (404 or empty)
-            content = await page.content()
-            if "404" in content.lower() or "not found" in content.lower():
-                logger.warning(f"Page seems to be a 404 or error: {url}")
-                raise ScrapingError("Error or 404 page detected")
+        try:
+            context = await self._create_context(proxy_server=proxy)
+            page = await context.new_page()
+            page.set_default_timeout(timeout)
+
+            logger.info(f"Navigating to {url}")
+            response = await page.goto(url, wait_until="domcontentloaded", timeout=timeout)
+
+            # Check if page loaded successfully via HTTP status
+            if response and response.status >= 400:
+                logger.warning(f"HTTP error {response.status} for {url}")
+                raise ScrapingError(f"HTTP {response.status} error")
 
             # Normalize selectors input
             if isinstance(selectors, str):
@@ -188,20 +204,31 @@ class AsyncPlaywrightScraper:
 
             return results
 
+        except ScrapingError:
+            # Mark proxy as failed and re-raise for retry
+            if rotator and proxy:
+                await rotator.mark_failure(proxy)
+            raise
+
         except Exception as e:
+            # Mark proxy as failed and wrap in ScrapingError for retry
             if rotator and proxy:
                 await rotator.mark_failure(proxy)
             logger.error(f"Scrape failed for {url}: {e}")
             raise ScrapingError(str(e))
 
         finally:
+            # Only close the page and context, keep browser alive for reuse
             if page:
                 try:
                     await page.close()
-                except Exception:
-                    pass
-            # Always clean up browser/context between retries
-            await self.close()
+                except Exception as e:
+                    logger.warning(f"Error closing page: {e}")
+            if context:
+                try:
+                    await context.close()
+                except Exception as e:
+                    logger.warning(f"Error closing context: {e}")
 
 
 # --- Context Manager Wrapper ---
