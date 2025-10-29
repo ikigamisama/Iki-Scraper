@@ -191,9 +191,11 @@ class AsyncPlaywrightScraper:
                     else:
                         results[selector] = None
                         logger.warning(f"Selector not found: {selector}")
-                except PlaywrightTimeoutError:
+                except PlaywrightTimeoutError as e:
                     results[selector] = None
                     logger.warning(f"Timeout waiting for selector: {selector}")
+                    raise ScrapingError(
+                        f"Timeout waiting for selector: {selector}") from e
                 except Exception as e:
                     results[selector] = None
                     logger.error(f"Error extracting selector {selector}: {e}")
