@@ -17,8 +17,8 @@ logger = get_logger("logs/scraper.log")
 MAX_RETRIES = 4
 MIN_WAIT = 1
 MAX_WAIT = 8
-PAGE_LOAD_TIMEOUT = 60000  # ms
-SELECTOR_WAIT_TIMEOUT = 10000  # ms per selector
+PAGE_LOAD_TIMEOUT = 120000  # ms
+SELECTOR_WAIT_TIMEOUT = 300000  # ms per selector
 
 
 class ScrapingError(Exception):
@@ -72,12 +72,12 @@ class AsyncPlaywrightScraper:
         if self.browser is None:
             if self.browser_type == "firefox":
                 self.browser = await self.playwright.firefox.launch(
-                    headless=False,
+                    headless=True,
                     args=launch_args
                 )
             else:
                 self.browser = await self.playwright.chromium.launch(
-                    headless=False,
+                    headless=True,
                     args=launch_args
                 )
             logger.info(
@@ -184,7 +184,7 @@ class AsyncPlaywrightScraper:
                     await page.wait_for_selector(selector, timeout=SELECTOR_WAIT_TIMEOUT)
                     element = await page.query_selector(selector)
                     if element:
-                        html_snippet = await element.inner_html()
+                        html_snippet = await element.evaluate("el => el.outerHTML")
                         results[selector] = BeautifulSoup(
                             html_snippet, "html.parser")
                         logger.success(f"Extracted content for {selector}")

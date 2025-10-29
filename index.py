@@ -25,6 +25,7 @@ async def single_selector_example():
             f"Extracted content for selector '{selector}' from {url}")
         print("\n=== Extracted Content Preview ===\n")
         print(soup.prettify()[:400])
+        print(result)
         print("\n=================================\n")
     else:
         logger.warning(f"No content found for selector '{selector}'")
@@ -32,11 +33,11 @@ async def single_selector_example():
 
 async def multiple_selectors_example():
     """Example: Scrape multiple selectors concurrently from one page."""
-    url = "https://example.com"
-    selectors = ["h1", "p", "a"]
+    url = "https://httpbin.org/html"
+    selectors = ["h1", "p"]
     logger.info("🌐 Running multi-selector scrape (with proxy if available)...")
 
-    result = await scrape_url(url, selectors=selectors, use_proxy=True)
+    result = await scrape_url(url, selectors=selectors, use_proxy=False)
 
     for selector, soup in result.items():
         if soup:
@@ -51,8 +52,8 @@ async def main():
     start = time.time()
     logger.info("🚀 Starting scraper examples...")
 
-    await single_selector_example()
-    # await multiple_selectors_example()
+    # await single_selector_example()
+    await multiple_selectors_example()
 
     duration = time.time() - start
     logger.info(

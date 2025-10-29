@@ -7,3 +7,70 @@
 2025-10-12 19:55:31 | INFO | scraper_module.scraper:close:112 - Browser and context closed successfully.
 2025-10-12 19:55:31 | SUCCESS | __main__:single_selector_example:24 - Extracted content for selector 'h1' from https://httpbin.org/html
 2025-10-12 19:55:31 | INFO | __main__:main:58 - 🏁 Completed all scraping examples in 26.87 seconds.
+2025-10-29 19:45:48 | INFO | __main__:main:52 - 🚀 Starting scraper examples...
+2025-10-29 19:45:48 | INFO | __main__:single_selector_example:18 - 🧭 Running single selector scrape (no proxy)...
+2025-10-29 19:45:54 | INFO | scraper_module.scraper:_ensure_browser:83 - Browser (chromium) launched successfully.
+2025-10-29 19:45:54 | INFO | scraper_module.scraper:fetch_sections:169 - Navigating to https://httpbin.org/html
+2025-10-29 19:46:00 | INFO | scraper_module.scraper:fetch_sections:183 - Waiting for selector: h1
+2025-10-29 19:46:00 | SUCCESS | scraper_module.scraper:fetch_sections:190 - Extracted content for h1
+2025-10-29 19:46:00 | INFO | scraper_module.scraper:close:123 - Browser closed successfully.
+2025-10-29 19:46:00 | SUCCESS | __main__:single_selector_example:24 - Extracted content for selector 'h1' from https://httpbin.org/html
+2025-10-29 19:46:00 | INFO | __main__:main:58 - 🏁 Completed all scraping examples in 12.50 seconds.
+2025-10-29 19:46:25 | INFO | __main__:main:52 - 🚀 Starting scraper examples...
+2025-10-29 19:46:25 | INFO | __main__:single_selector_example:18 - 🧭 Running single selector scrape (no proxy)...
+2025-10-29 19:46:26 | INFO | scraper_module.scraper:_ensure_browser:83 - Browser (chromium) launched successfully.
+2025-10-29 19:46:26 | INFO | scraper_module.scraper:fetch_sections:169 - Navigating to https://httpbin.org/html
+2025-10-29 19:46:29 | INFO | scraper_module.scraper:fetch_sections:183 - Waiting for selector: h1
+2025-10-29 19:46:29 | SUCCESS | scraper_module.scraper:fetch_sections:190 - Extracted content for h1
+2025-10-29 19:46:29 | INFO | scraper_module.scraper:close:123 - Browser closed successfully.
+2025-10-29 19:46:29 | SUCCESS | __main__:single_selector_example:24 - Extracted content for selector 'h1' from https://httpbin.org/html
+2025-10-29 19:46:29 | INFO | __main__:main:58 - 🏁 Completed all scraping examples in 4.30 seconds.
+2025-10-29 19:47:26 | INFO | __main__:main:53 - 🚀 Starting scraper examples...
+2025-10-29 19:47:26 | INFO | __main__:single_selector_example:18 - 🧭 Running single selector scrape (no proxy)...
+2025-10-29 19:47:27 | INFO | scraper_module.scraper:_ensure_browser:83 - Browser (chromium) launched successfully.
+2025-10-29 19:47:27 | INFO | scraper_module.scraper:fetch_sections:169 - Navigating to https://httpbin.org/html
+2025-10-29 19:47:48 | INFO | scraper_module.scraper:fetch_sections:183 - Waiting for selector: h1
+2025-10-29 19:47:48 | SUCCESS | scraper_module.scraper:fetch_sections:190 - Extracted content for h1
+2025-10-29 19:47:48 | INFO | scraper_module.scraper:close:123 - Browser closed successfully.
+2025-10-29 19:47:48 | SUCCESS | __main__:single_selector_example:24 - Extracted content for selector 'h1' from https://httpbin.org/html
+2025-10-29 19:47:48 | INFO | __main__:main:59 - 🏁 Completed all scraping examples in 21.93 seconds.
+2025-10-29 19:48:27 | INFO | __main__:main:53 - 🚀 Starting scraper examples...
+2025-10-29 19:48:27 | INFO | __main__:single_selector_example:18 - 🧭 Running single selector scrape (no proxy)...
+2025-10-29 19:48:28 | INFO | scraper_module.scraper:_ensure_browser:83 - Browser (chromium) launched successfully.
+2025-10-29 19:48:28 | INFO | scraper_module.scraper:fetch_sections:169 - Navigating to https://httpbin.org/html
+2025-10-29 19:48:29 | INFO | scraper_module.scraper:fetch_sections:183 - Waiting for selector: h1
+2025-10-29 19:48:29 | SUCCESS | scraper_module.scraper:fetch_sections:190 - Extracted content for h1
+2025-10-29 19:48:30 | INFO | scraper_module.scraper:close:123 - Browser closed successfully.
+2025-10-29 19:48:30 | SUCCESS | __main__:single_selector_example:24 - Extracted content for selector 'h1' from https://httpbin.org/html
+2025-10-29 19:48:30 | INFO | __main__:main:59 - 🏁 Completed all scraping examples in 2.07 seconds.
+2025-10-29 19:50:52 | INFO | __main__:main:53 - 🚀 Starting scraper examples...
+2025-10-29 19:50:52 | INFO | __main__:multiple_selectors_example:38 - 🌐 Running multi-selector scrape (with proxy if available)...
+2025-10-29 19:50:53 | INFO | scraper_module.proxy:_refresh_proxies_locked:78 - ProxyRotator: refreshing proxy pool...
+2025-10-29 19:51:11 | INFO | scraper_module.scraper:close:123 - Browser closed successfully.
+2025-10-29 19:51:17 | INFO | __main__:main:53 - 🚀 Starting scraper examples...
+2025-10-29 19:51:17 | INFO | __main__:multiple_selectors_example:38 - 🌐 Running multi-selector scrape (with proxy if available)...
+2025-10-29 19:51:18 | INFO | scraper_module.scraper:_ensure_browser:83 - Browser (chromium) launched successfully.
+2025-10-29 19:51:18 | INFO | scraper_module.scraper:fetch_sections:169 - Navigating to https://example.com
+2025-10-29 19:51:20 | INFO | scraper_module.scraper:fetch_sections:183 - Waiting for selector: h1
+2025-10-29 19:51:20 | SUCCESS | scraper_module.scraper:fetch_sections:190 - Extracted content for h1
+2025-10-29 19:51:20 | INFO | scraper_module.scraper:fetch_sections:183 - Waiting for selector: p
+2025-10-29 19:51:20 | SUCCESS | scraper_module.scraper:fetch_sections:190 - Extracted content for p
+2025-10-29 19:51:20 | INFO | scraper_module.scraper:fetch_sections:183 - Waiting for selector: a
+2025-10-29 19:51:20 | SUCCESS | scraper_module.scraper:fetch_sections:190 - Extracted content for a
+2025-10-29 19:51:20 | INFO | scraper_module.scraper:close:123 - Browser closed successfully.
+2025-10-29 19:51:20 | SUCCESS | __main__:multiple_selectors_example:44 - ✅ Selector 'h1' extracted successfully.
+2025-10-29 19:51:20 | SUCCESS | __main__:multiple_selectors_example:44 - ✅ Selector 'p' extracted successfully.
+2025-10-29 19:51:20 | SUCCESS | __main__:multiple_selectors_example:44 - ✅ Selector 'a' extracted successfully.
+2025-10-29 19:51:20 | INFO | __main__:main:59 - 🏁 Completed all scraping examples in 2.84 seconds.
+2025-10-29 19:51:38 | INFO | __main__:main:53 - 🚀 Starting scraper examples...
+2025-10-29 19:51:38 | INFO | __main__:multiple_selectors_example:38 - 🌐 Running multi-selector scrape (with proxy if available)...
+2025-10-29 19:51:39 | INFO | scraper_module.scraper:_ensure_browser:83 - Browser (chromium) launched successfully.
+2025-10-29 19:51:39 | INFO | scraper_module.scraper:fetch_sections:169 - Navigating to https://httpbin.org/html
+2025-10-29 19:51:41 | INFO | scraper_module.scraper:fetch_sections:183 - Waiting for selector: h1
+2025-10-29 19:51:41 | SUCCESS | scraper_module.scraper:fetch_sections:190 - Extracted content for h1
+2025-10-29 19:51:41 | INFO | scraper_module.scraper:fetch_sections:183 - Waiting for selector: p
+2025-10-29 19:51:41 | SUCCESS | scraper_module.scraper:fetch_sections:190 - Extracted content for p
+2025-10-29 19:51:41 | INFO | scraper_module.scraper:close:123 - Browser closed successfully.
+2025-10-29 19:51:41 | SUCCESS | __main__:multiple_selectors_example:44 - ✅ Selector 'h1' extracted successfully.
+2025-10-29 19:51:41 | SUCCESS | __main__:multiple_selectors_example:44 - ✅ Selector 'p' extracted successfully.
+2025-10-29 19:51:41 | INFO | __main__:main:59 - 🏁 Completed all scraping examples in 3.13 seconds.
