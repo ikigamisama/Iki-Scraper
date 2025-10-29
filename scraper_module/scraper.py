@@ -1,24 +1,25 @@
-# scraper_module/scraper.py
 import asyncio
 import random
-import time
 from typing import Optional, Dict, List, Union
 
 from bs4 import BeautifulSoup
-from fake_useragent import UserAgent
-from .logger import get_logger
 from playwright.async_api import async_playwright, Page, Browser, BrowserContext, TimeoutError as PlaywrightTimeoutError
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 
 from .proxy import ProxyRotator
+from .logger import get_logger
+
 logger = get_logger("logs/scraper.log")
 
 # Configuration
 MAX_RETRIES = 4
 MIN_WAIT = 1
 MAX_WAIT = 8
-PAGE_LOAD_TIMEOUT = 120000  # ms
-SELECTOR_WAIT_TIMEOUT = 300000  # ms per selector
+PAGE_LOAD_TIMEOUT = 120000
+SELECTOR_WAIT_TIMEOUT = 300000
+
+# Desktop User-Agent to prevent mobile redirects
+DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 
 
 class ScrapingError(Exception):
@@ -26,7 +27,6 @@ class ScrapingError(Exception):
     pass
 
 
-# --- Shared Proxy Rotator Singleton ---
 _proxy_rotator: Optional[ProxyRotator] = None
 
 
@@ -38,81 +38,163 @@ def get_proxy_rotator() -> ProxyRotator:
     return _proxy_rotator
 
 
-# --- Scraper Class ---
 class AsyncPlaywrightScraper:
     """
-    Async Playwright Scraper supporting multiple CSS selectors.
-    Returns a dict of {selector: BeautifulSoup or None}.
+    Async Playwright Scraper with human-like behavior and anti-detection.
+    Returns dict of {selector: BeautifulSoup or None}.
     """
 
     def __init__(self, browser_type: str = "chromium"):
         self.browser_type = browser_type
         self.playwright = None
         self.browser: Optional[Browser] = None
-        self.ua = UserAgent()
         self.pages_fetched = 0
+        self.session_referers = []
+
+    def get_headers(self, url: str = None) -> Dict[str, str]:
+        """Generate realistic desktop headers with referer chain"""
+
+        referer = None
+        if self.session_referers:
+            referer = self.session_referers[-1]
+        elif url:
+            # Random search engine referer for first visit
+            referer = random.choice([
+                "https://www.google.com/",
+                "https://www.bing.com/",
+            ])
+
+        headers = {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Cache-Control": "max-age=0",
+            "User-Agent": DESKTOP_UA,
+            "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none" if not referer else "cross-site",
+            "Sec-Fetch-User": "?1",
+            "Upgrade-Insecure-Requests": "1",
+        }
+
+        if referer:
+            headers["Referer"] = referer
+            # Check if same domain for accurate Sec-Fetch-Site
+            if url and referer:
+                from urllib.parse import urlparse
+                referer_domain = urlparse(referer).netloc
+                url_domain = urlparse(url).netloc
+                if referer_domain == url_domain:
+                    headers["Sec-Fetch-Site"] = "same-origin"
+
+        return headers
 
     async def _ensure_browser(self):
-        """Launch browser if not already initialized (without proxy config)."""
+        """Launch browser with anti-detection settings."""
         if self.playwright is None:
             self.playwright = await async_playwright().start()
 
-        # Launch browser without proxy (proxy will be set per-context)
-        launch_args = [
-            "--no-first-run",
-            "--no-default-browser-check",
-            "--disable-extensions",
-            "--disable-popup-blocking",
-            "--disable-background-timer-throttling",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--no-sandbox",
-        ]
-
         if self.browser is None:
+            args = [
+                '--disable-blink-features=AutomationControlled',
+                '--disable-dev-shm-usage',
+                '--no-sandbox',
+            ]
+
             if self.browser_type == "firefox":
                 self.browser = await self.playwright.firefox.launch(
                     headless=True,
-                    args=launch_args
+                    args=args
                 )
             else:
                 self.browser = await self.playwright.chromium.launch(
                     headless=True,
-                    args=launch_args
+                    args=args,
                 )
             logger.info(
                 f"Browser ({self.browser_type}) launched successfully.")
 
-    async def _create_context(self, proxy_server: Optional[str] = None) -> BrowserContext:
-        """Create a new browser context with optional proxy."""
-        ua = self.ua.random
+    async def _create_context(self, proxy_server: Optional[str] = None, url: str = None) -> BrowserContext:
+        """Create browser context with desktop viewport and anti-detection."""
+        headers = self.get_headers(url=url)
+
+        # Desktop viewport to prevent mobile redirects
         viewport = {
-            "width": random.randint(1200, 1920),
-            "height": random.randint(720, 1080)
+            "width": random.randint(1366, 1920),
+            "height": random.randint(768, 1080)
         }
 
         proxy_config = {"server": proxy_server} if proxy_server else None
 
         context = await self.browser.new_context(
-            user_agent=ua,
+            user_agent=DESKTOP_UA,
+            extra_http_headers=headers,
             viewport=viewport,
-            java_script_enabled=True,
-            ignore_https_errors=True,
             proxy=proxy_config,
+            locale='en-US',
+            ignore_https_errors=True,
         )
+
         await context.route("**/*", self._route_handler)
+
         return context
 
     async def _route_handler(self, route):
         """Block unnecessary resources to speed up scraping."""
-        req = route.request
-        if req.resource_type in ("image", "font", "media", "stylesheet"):
+        if route.request.resource_type in ("image", "font", "media"):
             await route.abort()
         else:
             await route.continue_()
 
+    async def _human_like_interaction(self, page: Page):
+        """Simulate human behavior with mouse movements and scrolling"""
+        try:
+            await asyncio.sleep(random.uniform(0.5, 1.5))
+
+            viewport = page.viewport_size
+
+            # Random mouse movements
+            for _ in range(random.randint(2, 4)):
+                x = random.randint(100, viewport['width'] - 100)
+                y = random.randint(100, viewport['height'] - 100)
+                await page.mouse.move(x, y)
+                await asyncio.sleep(random.uniform(0.1, 0.3))
+
+            # Natural scrolling
+            scroll_distance = random.randint(200, 500)
+            await page.evaluate(f"window.scrollBy(0, {scroll_distance})")
+            await asyncio.sleep(random.uniform(0.3, 0.7))
+
+        except Exception as e:
+            logger.debug(f"Human interaction simulation error: {e}")
+
+    async def _check_mobile_redirect(self, page: Page) -> bool:
+        """Check if page redirected to mobile subdomain and redirect back to desktop"""
+        current_url = page.url
+
+        # Common mobile subdomain patterns
+        mobile_patterns = ['m.', 'mobile.', 'wap.']
+
+        for pattern in mobile_patterns:
+            if pattern in current_url:
+                logger.warning(
+                    f"Mobile redirect detected in URL: {current_url}")
+                desktop_url = current_url.replace(pattern, 'www.')
+                logger.info(f"Redirecting to desktop version: {desktop_url}")
+                try:
+                    await page.goto(desktop_url, wait_until="do", timeout=PAGE_LOAD_TIMEOUT)
+                    return True
+                except Exception as e:
+                    logger.error(f"Failed to redirect to desktop version: {e}")
+                    return False
+
+        return False
+
     async def close(self):
-        """Cleanly close all browser resources."""
+        """Close browser resources."""
         try:
             if self.browser:
                 await self.browser.close()
@@ -137,10 +219,22 @@ class AsyncPlaywrightScraper:
         selectors: Union[str, List[str]],
         use_proxy: bool = False,
         timeout: int = PAGE_LOAD_TIMEOUT,
+        simulate_human: bool = True,
+        check_mobile_redirect: bool = True,
     ) -> Dict[str, Optional[BeautifulSoup]]:
         """
         Fetch page and extract HTML for provided CSS selectors.
-        Returns dict {selector: BeautifulSoup or None}
+
+        Args:
+            url: Target URL to scrape
+            selectors: CSS selector(s) to extract
+            use_proxy: Whether to use proxy rotation
+            timeout: Page load timeout in milliseconds
+            simulate_human: Simulate human-like interactions
+            check_mobile_redirect: Auto-detect and redirect from mobile subdomains
+
+        Returns:
+            Dict mapping selectors to BeautifulSoup objects (or None if not found)
         """
 
         rotator = get_proxy_rotator() if use_proxy else None
@@ -153,31 +247,50 @@ class AsyncPlaywrightScraper:
                 logger.info(
                     "No proxy available, continuing direct connection.")
 
-        # Ensure browser is running
         await self._ensure_browser()
 
-        # Create new context with proxy for this request
         context: Optional[BrowserContext] = None
         page: Optional[Page] = None
         results: Dict[str, Optional[BeautifulSoup]] = {}
 
         try:
-            context = await self._create_context(proxy_server=proxy)
+            context = await self._create_context(proxy_server=proxy, url=url)
             page = await context.new_page()
             page.set_default_timeout(timeout)
 
-            logger.info(f"Navigating to {url}")
-            response = await page.goto(url, wait_until="domcontentloaded", timeout=timeout)
+            # Track referer chain
+            self.session_referers.append(url)
+            if len(self.session_referers) > 10:
+                self.session_referers.pop(0)
 
-            # Check if page loaded successfully via HTTP status
+            logger.info(f"Navigating to {url}")
+
+            response = await page.goto(
+                url,
+                wait_until="domcontentloaded",
+                timeout=timeout
+            )
+
             if response and response.status >= 400:
                 logger.warning(f"HTTP error {response.status} for {url}")
                 raise ScrapingError(f"HTTP {response.status} error")
+
+            # Check and handle mobile redirects if enabled
+            if check_mobile_redirect:
+                await self._check_mobile_redirect(page)
+
+            # Simulate human behavior if enabled
+            if simulate_human:
+                await self._human_like_interaction(page)
+
+            # Additional wait for dynamic content
+            await asyncio.sleep(random.uniform(1.0, 2.0))
 
             # Normalize selectors input
             if isinstance(selectors, str):
                 selectors = [selectors]
 
+            # Extract content for each selector
             for selector in selectors:
                 try:
                     logger.info(f"Waiting for selector: {selector}")
@@ -207,20 +320,17 @@ class AsyncPlaywrightScraper:
             return results
 
         except ScrapingError:
-            # Mark proxy as failed and re-raise for retry
             if rotator and proxy:
                 await rotator.mark_failure(proxy)
             raise
 
         except Exception as e:
-            # Mark proxy as failed and wrap in ScrapingError for retry
             if rotator and proxy:
                 await rotator.mark_failure(proxy)
             logger.error(f"Scrape failed for {url}: {e}")
             raise ScrapingError(str(e))
 
         finally:
-            # Only close the page and context, keep browser alive for reuse
             if page:
                 try:
                     await page.close()
@@ -233,7 +343,6 @@ class AsyncPlaywrightScraper:
                     logger.warning(f"Error closing context: {e}")
 
 
-# --- Context Manager Wrapper ---
 class AsyncScraperContext:
     """Async context wrapper for safe initialization & cleanup."""
 
@@ -247,17 +356,29 @@ class AsyncScraperContext:
         await self.scraper.close()
 
 
-# --- High-Level Helper ---
 async def scrape_url(
     url: str,
     selectors: Union[str, List[str]],
     use_proxy: bool = False,
     browser_type: str = "chromium",
     timeout: int = PAGE_LOAD_TIMEOUT,
+    simulate_human: bool = True,
+    check_mobile_redirect: bool = True,
 ) -> Dict[str, Optional[BeautifulSoup]]:
     """
     Scrape one page and extract elements matching selectors.
-    Returns dict of {selector: BeautifulSoup or None}.
+
+    Args:
+        url: Target URL to scrape
+        selectors: CSS selector(s) to extract
+        use_proxy: Whether to use proxy rotation
+        browser_type: "chromium" or "firefox"
+        timeout: Page load timeout in milliseconds
+        simulate_human: Simulate human-like interactions (mouse, scroll)
+        check_mobile_redirect: Auto-detect and redirect from mobile subdomains
+
+    Returns:
+        Dict mapping selectors to BeautifulSoup objects (or None if not found)
     """
 
     async with AsyncScraperContext(browser_type=browser_type) as scraper:
@@ -266,4 +387,6 @@ async def scrape_url(
             selectors=selectors,
             use_proxy=use_proxy,
             timeout=timeout,
+            simulate_human=simulate_human,
+            check_mobile_redirect=check_mobile_redirect,
         )
