@@ -221,6 +221,7 @@ class AsyncPlaywrightScraper:
         timeout: int = PAGE_LOAD_TIMEOUT,
         simulate_human: bool = True,
         check_mobile_redirect: bool = True,
+        wait_until: str = "domcontentloaded",
     ) -> Dict[str, Optional[BeautifulSoup]]:
         """
         Fetch page and extract HTML for provided CSS selectors.
@@ -267,7 +268,7 @@ class AsyncPlaywrightScraper:
 
             response = await page.goto(
                 url,
-                wait_until="domcontentloaded",
+                wait_until=wait_until,
                 timeout=timeout
             )
 
@@ -364,6 +365,7 @@ async def scrape_url(
     timeout: int = PAGE_LOAD_TIMEOUT,
     simulate_human: bool = True,
     check_mobile_redirect: bool = True,
+    wait_until: str = "domcontentloaded",
 ) -> Dict[str, Optional[BeautifulSoup]]:
     """
     Scrape one page and extract elements matching selectors.
@@ -389,4 +391,5 @@ async def scrape_url(
             timeout=timeout,
             simulate_human=simulate_human,
             check_mobile_redirect=check_mobile_redirect,
+            wait_until=wait_until,
         )
